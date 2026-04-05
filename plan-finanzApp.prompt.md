@@ -2,6 +2,8 @@
 
 Minimal, clean Android finance tracker. **Kotlin + Jetpack Compose**, local **Room** database, **DataStore** for settings, Compose Navigation for two screens. No Hilt — manual DI via an Application class keeps it lean.
 
+**App label:** "Budget" · **Amounts:** whole integers only (no decimals) · **Language:** German
+
 ---
 
 ### Phase 1 — Project Scaffold
@@ -25,9 +27,9 @@ Minimal, clean Android finance tracker. **Kotlin + Jetpack Compose**, local **Ro
    - `year: Int`, `month: Int`, `isDone: Boolean`
 8. `Converters.kt` — TypeConverter: `LocalDate` ↔ `Long` (epoch day)
 9. `TransactionDao.kt`:
-   - `insert(Transaction)`, `delete(Transaction)`, `queryByDateRange(from, to): Flow<List<Transaction>>`
+   - `insert(Transaction)`, `update(Transaction)`, `delete(Transaction)`, `queryByDateRange(from, to): Flow<List<Transaction>>`
 10. `MonthStatusDao.kt`:
-    - `upsert(MonthStatus)`, `getByYearMonth(year, month): Flow<MonthStatus?>`
+    - `upsert(MonthStatus)`, `getByYearMonth(year, month): Flow<MonthStatus?>`, `getForMonths(keys: List<String>): Flow<List<MonthStatus>>` (key = "YYYY-MM", used when multiple months are visible)
 11. `AppDatabase.kt` — Room DB version 1, entities `[Transaction, MonthStatus]`, TypeConverters
 12. `TransactionRepository.kt` — wraps both DAOs, exposes suspend/Flow functions to ViewModels
 
@@ -41,16 +43,18 @@ Minimal, clean Android finance tracker. **Kotlin + Jetpack Compose**, local **Ro
 
 ### Phase 4 — Entry Screen _(parallel with Phase 5)_
 
-14. `EntryViewModel.kt` — holds `amount: String`, `subject: String`, `date: LocalDate` (default today), injected repository + settings
-    - `fun save(isExpense: Boolean)`: validates amount non-empty → persists Transaction → emits `closeApp: Boolean` event (reads setting)
+14. `EntryViewModel.kt` — holds `amount: String`, `subject: String`, `date: LocalDate` (default today), `editingId: Long?` (null = new entry), injected repository + settings
+    - `fun load(id: Long)`: pre-fills fields from existing transaction (edit mode)
+    - `fun save(isExpense: Boolean)`: validates amount non-empty → insert or update Transaction → emits one-shot `closeApp` event (reads setting)
 15. `EntryScreen.kt` (Composable):
-    - Top bar: app title + small gear icon → opens Settings bottom sheet
-    - Large numeric `OutlinedTextField` for amount (keyboardType = Number)
+    - Top bar: app title (or "Bearbeiten" in edit mode) + small gear icon → opens Settings bottom sheet
+    - Large numeric `OutlinedTextField` for amount (`KeyboardType.Number`, whole integers only)
     - Secondary `OutlinedTextField` for subject (optional)
     - `DatePickerDialog`-backed date field showing date only (no time)
     - Two full-width large buttons: **"+"** (income) and **"−"** (expense)
     - Small `IconButton` (chart icon) → navigate to statistics
     - Settings bottom sheet: single toggle "App bei Eingabe schließen"
+    - Close-on-entry uses `LaunchedEffect(event)` (not `SideEffect`) to call `finish()` exactly once
 
 ---
 
@@ -69,6 +73,8 @@ Minimal, clean Android finance tracker. **Kotlin + Jetpack Compose**, local **Ro
     - `LazyColumn` grouping transactions by `YearMonth`:
       - **Month header row**: month name + year + done-toggle (`Switch` or checkbox). Toggle is per-month regardless of filter span
       - **Transaction rows**: date (short format), subject (if present), amount with "+" or "−" prefix but **no color**
+      - **Long-press** on a transaction row → confirmation dialog → delete
+      - **Tap** on a transaction row → navigate to Entry screen in edit mode (pre-filled)
     - Sticky bottom bar: "Gesamt: {balance}" — no color, plain text
 
 ---
@@ -78,7 +84,7 @@ Minimal, clean Android finance tracker. **Kotlin + Jetpack Compose**, local **Ro
 19. Register `FinanzApp` in `AndroidManifest.xml`, set `MainActivity` as launcher
 20. Connect `MainActivity` → `AppNavigation`
 21. Handle back-press on Statistics → Entry (system back)
-22. Implement close-on-entry: after successful save in `EntryViewModel`, if setting is true → `finish()` the Activity via a `SideEffect`/`LaunchedEffect` in `EntryScreen`
+22. Close-on-entry: `EntryViewModel` exposes a `SharedFlow<Unit>` event; `EntryScreen` collects it in a `LaunchedEffect` and calls `(LocalContext.current as Activity).finish()`
 23. Ensure `amount` field rejects invalid input (non-numeric, empty) with inline error text
 
 ---
@@ -121,8 +127,8 @@ Minimal, clean Android finance tracker. **Kotlin + Jetpack Compose**, local **Ro
 
 ### Decisions
 
-- **No categories, no time, no colored amounts** — explicitly out of scope
-- `amount` stored as positive `Double`, sign determined by `isExpense` flag
+- **No categories, no time, no colored amounts, no decimal amounts** — explicitly out of scope
+- `amount` stored as positive `Int` (whole euros/units), sign determined by `isExpense` flag
 - "Done" is purely visual/informational, does not lock a month for new entries
 - minSdk 26 — avoids core library desugaring complexity for `LocalDate`
 - No Hilt — keeps boilerplate minimal for a single-developer small app
