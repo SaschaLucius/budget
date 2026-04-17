@@ -52,7 +52,6 @@ import com.lukulent.finanzapp.FinanzApp
 import com.lukulent.finanzapp.data.model.Transaction
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -81,12 +80,20 @@ fun StatisticsScreen(
     val hasSelection = selectedMonths.isNotEmpty()
 
     val filters = listOf(Filter.ThisMonth, Filter.LastMonth, Filter.LastThreeMonths, Filter.LastSixMonths, Filter.LastTwelveMonths, Filter.All)
-    val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT) }
+    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd.MM.yyyy") }
 
     val grouped = remember(transactions) {
         transactions.groupBy { YearMonth.from(it.date) }
             .toSortedMap(compareByDescending { it })
     }
+
+    val totalBalance = remember(transactions) {
+        transactions.sumOf { if (it.isExpense) -it.amount else it.amount }
+    }
+    val doneBalance = remember(transactions) {
+        transactions.filter { it.isDone }.sumOf { if (it.isExpense) -it.amount else it.amount }
+    }
+    // remaining = balance (undone only, from ViewModel)
 
     Scaffold(
         contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0),
@@ -136,13 +143,31 @@ fun StatisticsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.Center
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Text(
-                            text = "Gesamt: $balance",
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Gesamt", style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                text = if (totalBalance >= 0) "$totalBalance" else "\u2212${-totalBalance}",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Erledigt", style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                text = if (doneBalance >= 0) "$doneBalance" else "\u2212${-doneBalance}",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Offen", style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                text = if (balance >= 0) "$balance" else "\u2212${-balance}",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                        }
                     }
                 }
             }
