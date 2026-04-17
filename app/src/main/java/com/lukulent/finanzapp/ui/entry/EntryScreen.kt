@@ -57,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -185,10 +186,12 @@ fun EntryScreen(
                     PaymentMethod.AMAZON to Icons.Default.ShoppingCart
                 )
                 Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    PaymentMethod.entries.forEach { method ->
+                    PaymentMethod.entries.forEachIndexed { index, method ->
+                        if (index > 0) Spacer(modifier = Modifier.width(7.dp))
                         FilterChip(
                             selected = paymentMethod == method,
                             onClick = {
