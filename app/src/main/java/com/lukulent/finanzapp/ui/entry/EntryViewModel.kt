@@ -3,6 +3,7 @@ package com.lukulent.finanzapp.ui.entry
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.lukulent.finanzapp.data.model.PaymentMethod
 import com.lukulent.finanzapp.data.model.Transaction
 import com.lukulent.finanzapp.data.repository.TransactionRepository
 import com.lukulent.finanzapp.settings.SettingsDataStore
@@ -43,6 +44,15 @@ class EntryViewModel(
     private val _closeOnEntry = MutableStateFlow(false)
     val closeOnEntry: StateFlow<Boolean> = _closeOnEntry
 
+    private val _showPaymentMethod = MutableStateFlow(false)
+    val showPaymentMethod: StateFlow<Boolean> = _showPaymentMethod
+
+    private val _paymentMethod = MutableStateFlow<PaymentMethod?>(null)
+    val paymentMethod: StateFlow<PaymentMethod?> = _paymentMethod
+
+    private val _backgroundColor = MutableStateFlow(com.lukulent.finanzapp.settings.SettingsDataStore.DEFAULT_BACKGROUND_COLOR)
+    val backgroundColor: StateFlow<Long> = _backgroundColor
+
     sealed class UiEvent {
         data object NavigateBack : UiEvent()
         data object CloseApp : UiEvent()
@@ -55,6 +65,12 @@ class EntryViewModel(
         viewModelScope.launch {
             settingsDataStore.closeOnEntry.collect { _closeOnEntry.value = it }
         }
+        viewModelScope.launch {
+            settingsDataStore.showPaymentMethod.collect { _showPaymentMethod.value = it }
+        }
+        viewModelScope.launch {
+            settingsDataStore.backgroundColor.collect { _backgroundColor.value = it }
+        }
     }
 
     fun load(id: Long) {
@@ -66,6 +82,7 @@ class EntryViewModel(
             _date.value = transaction.date
             _isDone.value = transaction.isDone
             _isExpense.value = transaction.isExpense
+            _paymentMethod.value = transaction.paymentMethod
         }
     }
 
@@ -90,6 +107,10 @@ class EntryViewModel(
         _isExpense.value = value
     }
 
+    fun setPaymentMethod(method: PaymentMethod?) {
+        _paymentMethod.value = method
+    }
+
     fun delete() {
         val id = _editingId.value ?: return
         viewModelScope.launch {
@@ -101,6 +122,18 @@ class EntryViewModel(
     fun setCloseOnEntry(value: Boolean) {
         viewModelScope.launch {
             settingsDataStore.setCloseOnEntry(value)
+        }
+    }
+
+    fun setShowPaymentMethod(value: Boolean) {
+        viewModelScope.launch {
+            settingsDataStore.setShowPaymentMethod(value)
+        }
+    }
+
+    fun setBackgroundColor(color: Long) {
+        viewModelScope.launch {
+            settingsDataStore.setBackgroundColor(color)
         }
     }
 
@@ -119,7 +152,8 @@ class EntryViewModel(
                 isExpense = isExpense,
                 subject = _subject.value.ifBlank { null },
                 date = _date.value,
-                isDone = _isDone.value
+                isDone = _isDone.value,
+                paymentMethod = _paymentMethod.value
             )
             if (_editingId.value != null) {
                 repository.update(transaction)
@@ -133,6 +167,7 @@ class EntryViewModel(
                     _amount.value = ""
                     _subject.value = ""
                     _amountError.value = null
+                    _paymentMethod.value = null
                 }
             }
         }

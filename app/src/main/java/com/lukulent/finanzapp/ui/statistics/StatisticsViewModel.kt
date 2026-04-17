@@ -3,6 +3,7 @@ package com.lukulent.finanzapp.ui.statistics
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.lukulent.finanzapp.data.model.PaymentMethod
 import com.lukulent.finanzapp.data.model.Transaction
 import com.lukulent.finanzapp.data.repository.TransactionRepository
 import kotlinx.coroutines.Job
@@ -32,6 +33,9 @@ class StatisticsViewModel(
     private val _selectedMonthsBalance = MutableStateFlow(0)
     val selectedMonthsBalance: StateFlow<Int> = _selectedMonthsBalance
 
+    private val _paymentFilter = MutableStateFlow<PaymentMethod?>(null)
+    val paymentFilter: StateFlow<PaymentMethod?> = _paymentFilter
+
     private var queryJob: Job? = null
 
     init {
@@ -42,6 +46,10 @@ class StatisticsViewModel(
         _selectedFilter.value = filter
         _selectedMonths.value = emptySet()
         applyFilter(filter)
+    }
+
+    fun setPaymentFilter(method: PaymentMethod?) {
+        _paymentFilter.value = method
     }
 
     private fun applyFilter(filter: Filter) {

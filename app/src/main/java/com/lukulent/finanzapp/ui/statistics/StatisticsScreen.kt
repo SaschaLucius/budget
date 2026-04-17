@@ -2,7 +2,13 @@ package com.lukulent.finanzapp.ui.statistics
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,12 +19,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -30,7 +41,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -39,17 +52,24 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lukulent.finanzapp.FinanzApp
+import com.lukulent.finanzapp.data.model.PaymentMethod
 import com.lukulent.finanzapp.data.model.Transaction
+import com.lukulent.finanzapp.settings.SettingsDataStore
+import kotlinx.coroutines.launch
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -72,28 +92,39 @@ fun StatisticsScreen(
     val balance by viewModel.balance.collectAsState()
     val selectedMonths by viewModel.selectedMonths.collectAsState()
     val selectedMonthsBalance by viewModel.selectedMonthsBalance.collectAsState()
+    val paymentFilter by viewModel.paymentFilter.collectAsState()
+
+    val showPaymentMethod by app.settingsDataStore.showPaymentMethod.collectAsState(initial = false)
+    val closeOnEntry by app.settingsDataStore.closeOnEntry.collectAsState(initial = false)
+    val backgroundColor by app.settingsDataStore.backgroundColor.collectAsState(initial = SettingsDataStore.DEFAULT_BACKGROUND_COLOR)
+    val scope = rememberCoroutineScope()
 
     var showFilterMenu by remember { mutableStateOf(false) }
     var transactionToDelete by remember { mutableStateOf<Transaction?>(null) }
     var showMarkSelectedDoneDialog by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
 
     val hasSelection = selectedMonths.isNotEmpty()
 
     val filters = listOf(Filter.ThisMonth, Filter.LastMonth, Filter.LastThreeMonths, Filter.LastSixMonths, Filter.LastTwelveMonths, Filter.All)
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd.MM.yyyy") }
 
-    val grouped = remember(transactions) {
-        transactions.groupBy { YearMonth.from(it.date) }
+    val displayTransactions = remember(transactions, paymentFilter) {
+        if (paymentFilter == null) transactions
+        else transactions.filter { it.paymentMethod == paymentFilter }
+    }
+
+    val grouped = remember(displayTransactions) {
+        displayTransactions.groupBy { YearMonth.from(it.date) }
             .toSortedMap(compareByDescending { it })
     }
 
-    val totalBalance = remember(transactions) {
-        transactions.sumOf { if (it.isExpense) -it.amount else it.amount }
+    val totalBalance = remember(displayTransactions) {
+        displayTransactions.sumOf { if (it.isExpense) -it.amount else it.amount }
     }
-    val doneBalance = remember(transactions) {
-        transactions.filter { it.isDone }.sumOf { if (it.isExpense) -it.amount else it.amount }
+    val doneBalance = remember(displayTransactions) {
+        displayTransactions.filter { it.isDone }.sumOf { if (it.isExpense) -it.amount else it.amount }
     }
-    // remaining = balance (undone only, from ViewModel)
 
     Scaffold(
         contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0),
@@ -106,6 +137,11 @@ fun StatisticsScreen(
                         onNavigateBack()
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showSettings = true }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Einstellungen")
                     }
                 }
             )
@@ -213,6 +249,36 @@ fun StatisticsScreen(
                 if (pendingMonths.isNotEmpty()) {
                     TextButton(onClick = { viewModel.selectAllPending(pendingMonths) }) {
                         Text("Alle auswählen")
+                    }
+                }
+            }
+
+            if (showPaymentMethod) {
+                val pmIcons = mapOf(
+                    PaymentMethod.BAR to Icons.Default.AccountBalanceWallet,
+                    PaymentMethod.KARTE to Icons.Default.CreditCard,
+                    PaymentMethod.AMAZON to Icons.Default.ShoppingCart
+                )
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PaymentMethod.entries.forEach { method ->
+                        FilterChip(
+                            selected = paymentFilter == method,
+                            onClick = { viewModel.setPaymentFilter(if (paymentFilter == method) null else method) },
+                            label = { Text(method.label) },
+                            leadingIcon = {
+                                if (method == PaymentMethod.PAYPAL) {
+                                    Text("P", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, fontSize = 14.sp)
+                                } else {
+                                    Icon(imageVector = pmIcons[method]!!, contentDescription = method.label)
+                                }
+                            }
+                        )
                     }
                 }
             }
@@ -367,6 +433,110 @@ fun StatisticsScreen(
             dismissButton = {
                 TextButton(onClick = { showMarkSelectedDoneDialog = false }) {
                     Text("Abbrechen")
+                }
+            }
+        )
+    }
+
+    if (showSettings) {
+        AlertDialog(
+            onDismissRequest = { showSettings = false },
+            title = { Text("Einstellungen") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("App bei Eingabe schließen", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = closeOnEntry,
+                            onCheckedChange = { scope.launch { app.settingsDataStore.setCloseOnEntry(it) } }
+                        )
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Zahlungsmethode anzeigen", modifier = Modifier.weight(1f))
+                        Switch(
+                            checked = showPaymentMethod,
+                            onCheckedChange = { scope.launch { app.settingsDataStore.setShowPaymentMethod(it) } }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Hintergrundfarbe", style = MaterialTheme.typography.labelMedium)
+                    val presetColors = listOf(0xFFFFFBFEL, 0xFFE3F2FDL, 0xFFE8F5E9L)
+                    val isCustomColor = backgroundColor !in presetColors
+                    var showCustomPicker by remember { mutableStateOf(isCustomColor) }
+                    val initPickerColor = Color(backgroundColor)
+                    var pickerRed by remember { mutableStateOf(initPickerColor.red) }
+                    var pickerGreen by remember { mutableStateOf(initPickerColor.green) }
+                    var pickerBlue by remember { mutableStateOf(initPickerColor.blue) }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        presetColors.forEach { color ->
+                            val selected = backgroundColor == color
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(Color(color), CircleShape)
+                                    .border(
+                                        if (selected) 2.dp else 1.dp,
+                                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                        CircleShape
+                                    )
+                                    .clickable {
+                                        showCustomPicker = false
+                                        scope.launch { app.settingsDataStore.setBackgroundColor(color) }
+                                    }
+                            )
+                        }
+                        val rainbowBrush = Brush.sweepGradient(
+                            listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(rainbowBrush, CircleShape)
+                                .border(
+                                    if (isCustomColor) 2.dp else 1.dp,
+                                    if (isCustomColor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                    CircleShape
+                                )
+                                .clickable { showCustomPicker = !showCustomPicker }
+                        )
+                    }
+                    if (showCustomPicker) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(32.dp)
+                                .background(Color(pickerRed, pickerGreen, pickerBlue), RoundedCornerShape(8.dp))
+                        )
+                        Text("R", style = MaterialTheme.typography.labelSmall)
+                        Slider(value = pickerRed, onValueChange = { v ->
+                            pickerRed = v
+                            scope.launch { app.settingsDataStore.setBackgroundColor(Color(v, pickerGreen, pickerBlue).toArgb().toLong() and 0xFFFFFFFFL) }
+                        })
+                        Text("G", style = MaterialTheme.typography.labelSmall)
+                        Slider(value = pickerGreen, onValueChange = { v ->
+                            pickerGreen = v
+                            scope.launch { app.settingsDataStore.setBackgroundColor(Color(pickerRed, v, pickerBlue).toArgb().toLong() and 0xFFFFFFFFL) }
+                        })
+                        Text("B", style = MaterialTheme.typography.labelSmall)
+                        Slider(value = pickerBlue, onValueChange = { v ->
+                            pickerBlue = v
+                            scope.launch { app.settingsDataStore.setBackgroundColor(Color(pickerRed, pickerGreen, v).toArgb().toLong() and 0xFFFFFFFFL) }
+                        })
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSettings = false }) {
+                    Text("Fertig")
                 }
             }
         )
