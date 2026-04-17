@@ -126,6 +126,11 @@ fun StatisticsScreen(
         displayTransactions.filter { it.isDone }.sumOf { if (it.isExpense) -it.amount else it.amount }
     }
 
+    val openBalance = remember(displayTransactions) {
+        displayTransactions.filter { !it.isDone }
+            .sumOf { if (it.isExpense) -it.amount else it.amount }
+    }
+
     Scaffold(
         contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0),
         topBar = {
@@ -200,7 +205,7 @@ fun StatisticsScreen(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("Offen", style = MaterialTheme.typography.labelSmall)
                             Text(
-                                text = if (balance >= 0) "$balance" else "\u2212${-balance}",
+                                text = if (openBalance >= 0) "$openBalance" else "\u2212${-openBalance}",
                                 style = MaterialTheme.typography.titleSmall
                             )
                         }

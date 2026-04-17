@@ -15,5 +15,7 @@ class Converters {
     fun fromPaymentMethod(method: PaymentMethod?): String? = method?.name
 
     @TypeConverter
-    fun toPaymentMethod(name: String?): PaymentMethod? = name?.let { PaymentMethod.valueOf(it) }
+    fun toPaymentMethod(name: String?): PaymentMethod? = name?.let {
+        try { PaymentMethod.valueOf(it) } catch (_: IllegalArgumentException) { null }
+    }
 }
