@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -213,7 +214,7 @@ fun StatisticsScreen(
                             }
                             if (!monthAllDone) {
                                 Text(
-                                    text = if (monthBalance >= 0) "+$monthBalance" else "$monthBalance",
+                                    text = if (monthBalance >= 0) "$monthBalance" else "−${-monthBalance}",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -248,7 +249,7 @@ fun StatisticsScreen(
                                     )
                                 }
                                 Text(
-                                    text = "${if (transaction.isExpense) "−" else "+"}${transaction.amount}",
+                                    text = "${if (transaction.isExpense) "−" else ""}${transaction.amount}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     textDecoration = textDecoration
                                 )
@@ -300,7 +301,14 @@ fun StatisticsScreen(
                     .joinToString(", ") {
                         "${it.month.getDisplayName(TextStyle.SHORT, Locale.GERMAN)} ${it.year}"
                     }
-                Text("Alle Einträge in $names als erledigt markieren?")
+                Column {
+                    Text("Alle Einträge in $names als erledigt markieren?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Summe: $selectedMonthsBalance",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
             },
             confirmButton = {
                 TextButton(onClick = {

@@ -90,6 +90,14 @@ class EntryViewModel(
         _isExpense.value = value
     }
 
+    fun delete() {
+        val id = _editingId.value ?: return
+        viewModelScope.launch {
+            repository.getById(id)?.let { repository.delete(it) }
+            _uiEvent.emit(UiEvent.NavigateBack)
+        }
+    }
+
     fun setCloseOnEntry(value: Boolean) {
         viewModelScope.launch {
             settingsDataStore.setCloseOnEntry(value)

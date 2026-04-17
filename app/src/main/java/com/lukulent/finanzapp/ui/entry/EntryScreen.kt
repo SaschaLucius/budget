@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
@@ -97,6 +98,7 @@ fun EntryScreen(
     val isEditing = editingId != null
     var showDatePicker by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
 
@@ -159,7 +161,9 @@ fun EntryScreen(
             if (isEditing) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.setIsDone(!isDone) }
                 ) {
                     Checkbox(
                         checked = isDone,
@@ -196,6 +200,17 @@ fun EntryScreen(
                 ) {
                     Text("Speichern", fontSize = 18.sp)
                 }
+                OutlinedButton(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Löschen", fontSize = 18.sp)
+                }
             } else {
                 Button(
                     onClick = { viewModel.save(isExpense = false) },
@@ -228,6 +243,27 @@ fun EntryScreen(
                 )
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Eintrag löschen") },
+            text = { Text("Diesen Eintrag wirklich löschen?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.delete()
+                    showDeleteDialog = false
+                }) {
+                    Text("Löschen", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
     }
 
     if (showDatePicker) {
