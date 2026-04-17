@@ -69,6 +69,11 @@ class StatisticsViewModel(
         _selectedMonthsBalance.value = 0
     }
 
+    fun selectAllPending(months: Set<YearMonth>) {
+        _selectedMonths.value = months
+        recalcSelectedBalance(_transactions.value, months)
+    }
+
     private fun recalcSelectedBalance(allTransactions: List<Transaction>, months: Set<YearMonth>) {
         _selectedMonthsBalance.value = allTransactions
             .filter { !it.isDone && YearMonth.from(it.date) in months }

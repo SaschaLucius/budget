@@ -153,24 +153,41 @@ fun StatisticsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                FilterChip(
-                    selected = true,
-                    onClick = { showFilterMenu = true },
-                    label = { Text(selectedFilter.label) }
-                )
-                DropdownMenu(
-                    expanded = showFilterMenu,
-                    onDismissRequest = { showFilterMenu = false }
-                ) {
-                    filters.forEach { filter ->
-                        DropdownMenuItem(
-                            text = { Text(filter.label) },
-                            onClick = {
-                                viewModel.setFilter(filter)
-                                showFilterMenu = false
-                            }
-                        )
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box {
+                    FilterChip(
+                        selected = true,
+                        onClick = { showFilterMenu = true },
+                        label = { Text(selectedFilter.label) }
+                    )
+                    DropdownMenu(
+                        expanded = showFilterMenu,
+                        onDismissRequest = { showFilterMenu = false }
+                    ) {
+                        filters.forEach { filter ->
+                            DropdownMenuItem(
+                                text = { Text(filter.label) },
+                                onClick = {
+                                    viewModel.setFilter(filter)
+                                    showFilterMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+                val pendingMonths = remember(grouped) {
+                    grouped.entries
+                        .filter { (_, txns) -> !txns.all { it.isDone } }
+                        .map { it.key }
+                        .toSet()
+                }
+                if (pendingMonths.isNotEmpty()) {
+                    TextButton(onClick = { viewModel.selectAllPending(pendingMonths) }) {
+                        Text("Alle auswählen")
                     }
                 }
             }
@@ -226,6 +243,7 @@ fun StatisticsScreen(
                         key = { it.id }
                     ) { transaction ->
                         val textDecoration = if (transaction.isDone) TextDecoration.LineThrough else null
+                        val textColor = if (transaction.isDone) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f) else Color.Unspecified
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -245,13 +263,15 @@ fun StatisticsScreen(
                                     Text(
                                         text = transaction.date.format(dateFormatter),
                                         style = MaterialTheme.typography.bodyMedium,
-                                        textDecoration = textDecoration
+                                        textDecoration = textDecoration,
+                                        color = textColor
                                     )
                                 }
                                 Text(
                                     text = "${if (transaction.isExpense) "−" else ""}${transaction.amount}",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    textDecoration = textDecoration
+                                    textDecoration = textDecoration,
+                                    color = textColor
                                 )
                             }
                             if (!transaction.subject.isNullOrBlank()) {
@@ -259,6 +279,7 @@ fun StatisticsScreen(
                                     text = transaction.subject,
                                     style = MaterialTheme.typography.bodySmall,
                                     textDecoration = textDecoration,
+                                    color = textColor,
                                     modifier = Modifier.padding(start = 32.dp)
                                 )
                             }
