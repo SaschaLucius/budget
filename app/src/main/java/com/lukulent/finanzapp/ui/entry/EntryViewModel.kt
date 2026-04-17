@@ -34,6 +34,9 @@ class EntryViewModel(
     private val _isDone = MutableStateFlow(false)
     val isDone: StateFlow<Boolean> = _isDone
 
+    private val _isExpense = MutableStateFlow(false)
+    val isExpense: StateFlow<Boolean> = _isExpense
+
     private val _editingId = MutableStateFlow<Long?>(null)
     val editingId: StateFlow<Long?> = _editingId
 
@@ -62,6 +65,7 @@ class EntryViewModel(
             _subject.value = transaction.subject ?: ""
             _date.value = transaction.date
             _isDone.value = transaction.isDone
+            _isExpense.value = transaction.isExpense
         }
     }
 
@@ -80,6 +84,10 @@ class EntryViewModel(
 
     fun setIsDone(value: Boolean) {
         _isDone.value = value
+    }
+
+    fun setIsExpense(value: Boolean) {
+        _isExpense.value = value
     }
 
     fun setCloseOnEntry(value: Boolean) {

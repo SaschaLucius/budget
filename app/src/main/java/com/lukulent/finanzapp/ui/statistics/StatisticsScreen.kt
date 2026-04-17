@@ -1,6 +1,7 @@
 package com.lukulent.finanzapp.ui.statistics
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -77,7 +79,7 @@ fun StatisticsScreen(
 
     val hasSelection = selectedMonths.isNotEmpty()
 
-    val filters = listOf(Filter.ThisMonth, Filter.LastMonth, Filter.LastThreeMonths)
+    val filters = listOf(Filter.ThisMonth, Filter.LastMonth, Filter.LastThreeMonths, Filter.LastSixMonths, Filter.LastTwelveMonths, Filter.All)
     val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT) }
 
     val grouped = remember(transactions) {
@@ -183,25 +185,19 @@ fun StatisticsScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .background(
+                                    if (monthSelected) MaterialTheme.colorScheme.surfaceVariant
+                                    else Color.Transparent
+                                )
                                 .combinedClickable(
-                                    onClick = { viewModel.toggleMonthSelection(yearMonth) },
-                                    onLongClick = { viewModel.toggleMonthSelection(yearMonth) }
+                                    onClick = { if (!monthAllDone) viewModel.toggleMonthSelection(yearMonth) },
+                                    onLongClick = { if (!monthAllDone) viewModel.toggleMonthSelection(yearMonth) }
                                 )
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = if (monthSelected) Icons.Default.CheckCircle
-                                    else Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = if (monthSelected)
-                                        MaterialTheme.colorScheme.primary
-                                    else
-                                        MaterialTheme.colorScheme.outlineVariant,
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
                                 Text(
                                     text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.GERMAN)} ${yearMonth.year}",
                                     style = MaterialTheme.typography.titleSmall,
@@ -215,11 +211,13 @@ fun StatisticsScreen(
                                     )
                                 }
                             }
-                            Text(
-                                text = if (monthBalance >= 0) "+$monthBalance" else "$monthBalance",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
+                            if (!monthAllDone) {
+                                Text(
+                                    text = if (monthBalance >= 0) "+$monthBalance" else "$monthBalance",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                     items(

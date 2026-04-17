@@ -11,18 +11,22 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -87,6 +91,7 @@ fun EntryScreen(
     val amountError by viewModel.amountError.collectAsState()
     val closeOnEntry by viewModel.closeOnEntry.collectAsState()
     val isDone by viewModel.isDone.collectAsState()
+    val isExpense by viewModel.isExpense.collectAsState()
     val editingId by viewModel.editingId.collectAsState()
 
     val isEditing = editingId != null
@@ -162,24 +167,53 @@ fun EntryScreen(
                     )
                     Text("Erledigt")
                 }
-            }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val activeColors = ButtonDefaults.buttonColors()
+                    val inactiveColors = ButtonDefaults.outlinedButtonColors()
+                    OutlinedButton(
+                        onClick = { viewModel.setIsExpense(false) },
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        colors = if (!isExpense) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors()
+                    ) {
+                        Text("+", fontSize = 24.sp)
+                    }
+                    OutlinedButton(
+                        onClick = { viewModel.setIsExpense(true) },
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        colors = if (isExpense) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors()
+                    ) {
+                        Text("−", fontSize = 24.sp)
+                    }
+                }
+                Button(
+                    onClick = { viewModel.save(isExpense = isExpense) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Text("Speichern", fontSize = 18.sp)
+                }
+            } else {
+                Button(
+                    onClick = { viewModel.save(isExpense = false) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Text("+", fontSize = 24.sp)
+                }
 
-            Button(
-                onClick = { viewModel.save(isExpense = false) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Text("+", fontSize = 24.sp)
-            }
-
-            Button(
-                onClick = { viewModel.save(isExpense = true) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-            ) {
-                Text("−", fontSize = 24.sp)
+                Button(
+                    onClick = { viewModel.save(isExpense = true) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                ) {
+                    Text("−", fontSize = 24.sp)
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f))
