@@ -104,6 +104,12 @@ fun StatisticsScreen(
     var showMarkSelectedDoneDialog by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
 
+    val pmIcons = mapOf(
+        PaymentMethod.BAR to Icons.Default.AccountBalanceWallet,
+        PaymentMethod.KARTE to Icons.Default.CreditCard,
+        PaymentMethod.AMAZON to Icons.Default.ShoppingCart
+    )
+
     val hasSelection = selectedMonths.isNotEmpty()
 
     val filters = listOf(Filter.ThisMonth, Filter.LastMonth, Filter.LastThreeMonths, Filter.LastSixMonths, Filter.LastTwelveMonths, Filter.All)
@@ -259,11 +265,6 @@ fun StatisticsScreen(
             }
 
             if (showPaymentMethod) {
-                val pmIcons = mapOf(
-                    PaymentMethod.BAR to Icons.Default.AccountBalanceWallet,
-                    PaymentMethod.KARTE to Icons.Default.CreditCard,
-                    PaymentMethod.AMAZON to Icons.Default.ShoppingCart
-                )
                 Row(
                     modifier = Modifier
                         .horizontalScroll(rememberScrollState())
@@ -355,7 +356,25 @@ fun StatisticsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Spacer(modifier = Modifier.width(32.dp))
+                                    Box(
+                                        modifier = Modifier.size(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (showPaymentMethod && transaction.paymentMethod != null) {
+                                            if (transaction.paymentMethod == PaymentMethod.PAYPAL) {
+                                                Text("P", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = textColor)
+                                            } else {
+                                                pmIcons[transaction.paymentMethod]?.let { icon ->
+                                                    Icon(
+                                                        imageVector = icon,
+                                                        contentDescription = transaction.paymentMethod.label,
+                                                        modifier = Modifier.size(18.dp),
+                                                        tint = textColor
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                     Text(
                                         text = transaction.date.format(dateFormatter),
                                         style = MaterialTheme.typography.bodyMedium,
