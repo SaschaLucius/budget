@@ -31,11 +31,14 @@ class EntryViewModel(
     private val _amountError = MutableStateFlow<String?>(null)
     val amountError: StateFlow<String?> = _amountError
 
+    private val _isDone = MutableStateFlow(false)
+    val isDone: StateFlow<Boolean> = _isDone
+
+    private val _editingId = MutableStateFlow<Long?>(null)
+    val editingId: StateFlow<Long?> = _editingId
+
     private val _closeOnEntry = MutableStateFlow(false)
     val closeOnEntry: StateFlow<Boolean> = _closeOnEntry
-
-    var editingId: Long? = null
-        private set
 
     sealed class UiEvent {
         data object NavigateBack : UiEvent()
@@ -54,10 +57,11 @@ class EntryViewModel(
     fun load(id: Long) {
         viewModelScope.launch {
             val transaction = repository.getById(id) ?: return@launch
-            editingId = transaction.id
+            _editingId.value = transaction.id
             _amount.value = transaction.amount.toString()
             _subject.value = transaction.subject ?: ""
             _date.value = transaction.date
+            _isDone.value = transaction.isDone
         }
     }
 
@@ -72,6 +76,10 @@ class EntryViewModel(
 
     fun setDate(value: LocalDate) {
         _date.value = value
+    }
+
+    fun setIsDone(value: Boolean) {
+        _isDone.value = value
     }
 
     fun setCloseOnEntry(value: Boolean) {
@@ -90,13 +98,14 @@ class EntryViewModel(
 
         viewModelScope.launch {
             val transaction = Transaction(
-                id = editingId ?: 0,
+                id = _editingId.value ?: 0,
                 amount = parsed,
                 isExpense = isExpense,
                 subject = _subject.value.ifBlank { null },
-                date = _date.value
+                date = _date.value,
+                isDone = _isDone.value
             )
-            if (editingId != null) {
+            if (_editingId.value != null) {
                 repository.update(transaction)
                 _uiEvent.emit(UiEvent.NavigateBack)
             } else {

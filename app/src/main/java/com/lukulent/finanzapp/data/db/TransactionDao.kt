@@ -27,4 +27,7 @@ interface TransactionDao {
         "SELECT * FROM transactions WHERE date >= :from AND date <= :to ORDER BY date DESC, id DESC"
     )
     fun queryByDateRange(from: LocalDate, to: LocalDate): Flow<List<Transaction>>
+
+    @Query("UPDATE transactions SET isDone = 1 WHERE date >= :from AND date <= :to")
+    suspend fun markAllDoneInRange(from: LocalDate, to: LocalDate)
 }

@@ -6,14 +6,18 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lukulent.finanzapp.FinanzApp
@@ -62,9 +67,14 @@ fun StatisticsScreen(
     val selectedFilter by viewModel.selectedFilter.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
     val balance by viewModel.balance.collectAsState()
+    val selectedMonths by viewModel.selectedMonths.collectAsState()
+    val selectedMonthsBalance by viewModel.selectedMonthsBalance.collectAsState()
 
     var showFilterMenu by remember { mutableStateOf(false) }
     var transactionToDelete by remember { mutableStateOf<Transaction?>(null) }
+    var showMarkSelectedDoneDialog by remember { mutableStateOf(false) }
+
+    val hasSelection = selectedMonths.isNotEmpty()
 
     val filters = listOf(Filter.ThisMonth, Filter.LastMonth, Filter.LastThreeMonths)
     val dateFormatter = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT) }
@@ -79,7 +89,10 @@ fun StatisticsScreen(
             TopAppBar(
                 title = { Text("Statistik") },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = {
+                        viewModel.clearSelection()
+                        onNavigateBack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
                     }
                 }
@@ -87,16 +100,45 @@ fun StatisticsScreen(
         },
         bottomBar = {
             Surface(tonalElevation = 3.dp) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "Gesamt: $balance",
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                if (hasSelection) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "${selectedMonths.size} Monat(e) ausgewählt",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                text = "Summe: $selectedMonthsBalance",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                        Row {
+                            TextButton(onClick = { viewModel.clearSelection() }) {
+                                Text("Abbrechen")
+                            }
+                            Button(onClick = { showMarkSelectedDoneDialog = true }) {
+                                Text("Erledigen")
+                            }
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "Gesamt: $balance",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                 }
             }
         }
@@ -130,18 +172,59 @@ fun StatisticsScreen(
 
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 grouped.forEach { (yearMonth, monthTransactions) ->
+                    val monthBalance = monthTransactions
+                        .filter { !it.isDone }
+                        .sumOf { if (it.isExpense) -it.amount else it.amount }
+                    val monthAllDone = monthTransactions.all { it.isDone }
+                    val monthSelected = yearMonth in selectedMonths
                     item(key = "header_$yearMonth") {
-                        Text(
-                            text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.GERMAN)} ${yearMonth.year}",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .combinedClickable(
+                                    onClick = { viewModel.toggleMonthSelection(yearMonth) },
+                                    onLongClick = { viewModel.toggleMonthSelection(yearMonth) }
+                                )
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = if (monthSelected) Icons.Default.CheckCircle
+                                    else Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = if (monthSelected)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.outlineVariant,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                                Text(
+                                    text = "${yearMonth.month.getDisplayName(TextStyle.FULL, Locale.GERMAN)} ${yearMonth.year}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (monthAllDone) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = "Alle erledigt"
+                                    )
+                                }
+                            }
+                            Text(
+                                text = if (monthBalance >= 0) "+$monthBalance" else "$monthBalance",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                     items(
                         items = monthTransactions,
                         key = { it.id }
                     ) { transaction ->
+                        val textDecoration = if (transaction.isDone) TextDecoration.LineThrough else null
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -153,21 +236,29 @@ fun StatisticsScreen(
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = transaction.date.format(dateFormatter),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Spacer(modifier = Modifier.width(32.dp))
+                                    Text(
+                                        text = transaction.date.format(dateFormatter),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        textDecoration = textDecoration
+                                    )
+                                }
                                 Text(
                                     text = "${if (transaction.isExpense) "−" else "+"}${transaction.amount}",
-                                    style = MaterialTheme.typography.bodyMedium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    textDecoration = textDecoration
                                 )
                             }
                             if (!transaction.subject.isNullOrBlank()) {
                                 Text(
                                     text = transaction.subject,
-                                    style = MaterialTheme.typography.bodySmall
+                                    style = MaterialTheme.typography.bodySmall,
+                                    textDecoration = textDecoration,
+                                    modifier = Modifier.padding(start = 32.dp)
                                 )
                             }
                         }
@@ -193,6 +284,34 @@ fun StatisticsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { transactionToDelete = null }) {
+                    Text("Abbrechen")
+                }
+            }
+        )
+    }
+
+    if (showMarkSelectedDoneDialog) {
+        AlertDialog(
+            onDismissRequest = { showMarkSelectedDoneDialog = false },
+            title = { Text("Monate erledigen") },
+            text = {
+                val names = selectedMonths
+                    .sortedDescending()
+                    .joinToString(", ") {
+                        "${it.month.getDisplayName(TextStyle.SHORT, Locale.GERMAN)} ${it.year}"
+                    }
+                Text("Alle Einträge in $names als erledigt markieren?")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.markSelectedMonthsDone()
+                    showMarkSelectedDoneDialog = false
+                }) {
+                    Text("Erledigen")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMarkSelectedDoneDialog = false }) {
                     Text("Abbrechen")
                 }
             }

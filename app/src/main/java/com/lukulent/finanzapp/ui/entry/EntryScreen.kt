@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -83,8 +84,10 @@ fun EntryScreen(
     val date by viewModel.date.collectAsState()
     val amountError by viewModel.amountError.collectAsState()
     val closeOnEntry by viewModel.closeOnEntry.collectAsState()
+    val isDone by viewModel.isDone.collectAsState()
+    val editingId by viewModel.editingId.collectAsState()
 
-    val isEditing = viewModel.editingId != null
+    val isEditing = editingId != null
     var showDatePicker by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
 
@@ -143,6 +146,19 @@ fun EntryScreen(
             )
 
             Spacer(modifier = Modifier.height(8.dp))
+
+            if (isEditing) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Checkbox(
+                        checked = isDone,
+                        onCheckedChange = { viewModel.setIsDone(it) }
+                    )
+                    Text("Erledigt")
+                }
+            }
 
             Button(
                 onClick = { viewModel.save(isExpense = false) },

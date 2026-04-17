@@ -12,4 +12,7 @@ class TransactionRepository(private val dao: TransactionDao) {
     suspend fun getById(id: Long): Transaction? = dao.getById(id)
     fun queryByDateRange(from: LocalDate, to: LocalDate): Flow<List<Transaction>> =
         dao.queryByDateRange(from, to)
+
+    suspend fun markAllDoneInRange(from: LocalDate, to: LocalDate) =
+        dao.markAllDoneInRange(from, to)
 }

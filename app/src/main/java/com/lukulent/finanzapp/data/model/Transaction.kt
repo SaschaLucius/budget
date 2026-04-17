@@ -11,5 +11,6 @@ data class Transaction(
     val amount: Int,
     val isExpense: Boolean,
     val subject: String?,
-    val date: LocalDate
+    val date: LocalDate,
+    val isDone: Boolean = false
 )
