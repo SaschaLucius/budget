@@ -30,4 +30,7 @@ interface TransactionDao {
 
     @Query("UPDATE transactions SET isDone = 1 WHERE date >= :from AND date <= :to")
     suspend fun markAllDoneInRange(from: LocalDate, to: LocalDate)
+
+    @Query("UPDATE transactions SET isDone = 1 WHERE id IN (:ids)")
+    suspend fun markDoneByIds(ids: List<Long>)
 }

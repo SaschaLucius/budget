@@ -50,6 +50,7 @@ class StatisticsViewModel(
 
     fun setPaymentFilter(method: PaymentMethod?) {
         _paymentFilter.value = method
+        recalcSelectedBalance(_transactions.value, _selectedMonths.value)
     }
 
     private fun applyFilter(filter: Filter) {
@@ -83,8 +84,9 @@ class StatisticsViewModel(
     }
 
     private fun recalcSelectedBalance(allTransactions: List<Transaction>, months: Set<YearMonth>) {
+        val filter = _paymentFilter.value
         _selectedMonthsBalance.value = allTransactions
-            .filter { !it.isDone && YearMonth.from(it.date) in months }
+            .filter { !it.isDone && YearMonth.from(it.date) in months && (filter == null || it.paymentMethod == filter) }
             .sumOf { if (it.isExpense) -it.amount else it.amount }
     }
 
@@ -105,12 +107,22 @@ class StatisticsViewModel(
 
     fun markSelectedMonthsDone() {
         val months = _selectedMonths.value
+        val filter = _paymentFilter.value
         viewModelScope.launch {
-            months.forEach { ym ->
-                repository.markAllDoneInRange(
-                    from = ym.atDay(1),
-                    to = ym.atEndOfMonth()
-                )
+            if (filter == null) {
+                // No payment filter: use fast SQL range update
+                months.forEach { ym ->
+                    repository.markAllDoneInRange(
+                        from = ym.atDay(1),
+                        to = ym.atEndOfMonth()
+                    )
+                }
+            } else {
+                // Payment filter active: only mark the visible transactions
+                val ids = _transactions.value
+                    .filter { !it.isDone && YearMonth.from(it.date) in months && it.paymentMethod == filter }
+                    .map { it.id }
+                if (ids.isNotEmpty()) repository.markDoneByIds(ids)
             }
             _selectedMonths.value = emptySet()
         }

@@ -15,4 +15,7 @@ class TransactionRepository(private val dao: TransactionDao) {
 
     suspend fun markAllDoneInRange(from: LocalDate, to: LocalDate) =
         dao.markAllDoneInRange(from, to)
+
+    suspend fun markDoneByIds(ids: List<Long>) =
+        dao.markDoneByIds(ids)
 }
