@@ -12,12 +12,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
 import com.lukulent.finanzapp.navigation.AppNavigation
 import com.lukulent.finanzapp.settings.SettingsDataStore
@@ -38,6 +41,13 @@ class MainActivity : ComponentActivity() {
             )
             val bgColor = Color(bgColorLong)
             var updateInfo by remember { mutableStateOf<ReleaseInfo?>(null) }
+
+            val isLight = bgColor.luminance() > 0.5f
+            SideEffect {
+                val controller = WindowCompat.getInsetsController(window, window.decorView)
+                controller.isAppearanceLightStatusBars = isLight
+                controller.isAppearanceLightNavigationBars = isLight
+            }
 
             LaunchedEffect(Unit) {
                 val release = fetchLatestRelease()
