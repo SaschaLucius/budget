@@ -77,7 +77,7 @@ class EntryViewModel(
         viewModelScope.launch {
             val transaction = repository.getById(id) ?: return@launch
             _editingId.value = transaction.id
-            _amount.value = transaction.amount.toString()
+            _amount.value = transaction.amountRaw ?: transaction.amount.toString()
             _subject.value = transaction.subject ?: ""
             _date.value = transaction.date
             _isDone.value = transaction.isDone
@@ -87,7 +87,11 @@ class EntryViewModel(
     }
 
     fun setAmount(value: String) {
-        _amount.value = value.filter { it.isDigit() }
+        // Allow digits and at most one decimal separator (dot or comma)
+        val filtered = value.filter { it.isDigit() || it == '.' || it == ',' }
+        val normalized = filtered.replace(',', '.')
+        val dotCount = normalized.count { it == '.' }
+        _amount.value = if (dotCount <= 1) normalized else _amount.value
         _amountError.value = null
     }
 
@@ -139,21 +143,23 @@ class EntryViewModel(
 
     fun save(isExpense: Boolean) {
         val raw = _amount.value
-        val parsed = raw.toIntOrNull()
+        val parsed = raw.replace(',', '.').toDoubleOrNull()
         if (raw.isBlank() || parsed == null || parsed <= 0) {
             _amountError.value = "Bitte einen gültigen Betrag eingeben"
             return
         }
+        val amountInt = parsed.toInt()
 
         viewModelScope.launch {
             val transaction = Transaction(
                 id = _editingId.value ?: 0,
-                amount = parsed,
+                amount = amountInt,
                 isExpense = isExpense,
                 subject = _subject.value.ifBlank { null },
                 date = _date.value,
                 isDone = _isDone.value,
-                paymentMethod = _paymentMethod.value
+                paymentMethod = _paymentMethod.value,
+                amountRaw = if (raw.contains('.') || raw.contains(',')) raw else null
             )
             if (_editingId.value != null) {
                 repository.update(transaction)

@@ -124,9 +124,13 @@ fun StatisticsScreen(
                 if (searchQuery.isBlank()) list
                 else {
                     val q = searchQuery.trim().lowercase()
+                    val qDot = q.replace(',', '.')
+                    val qComma = q.replace('.', ',')
                     list.filter {
                         it.subject?.lowercase()?.contains(q) == true ||
-                        it.amount.toString().contains(q)
+                        it.amount.toString().contains(q) ||
+                        it.amountRaw?.replace(',', '.')?.contains(qDot) == true ||
+                        it.amountRaw?.replace('.', ',')?.contains(qComma) == true
                     }
                 }
             }

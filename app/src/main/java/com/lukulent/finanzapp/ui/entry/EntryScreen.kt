@@ -144,7 +144,7 @@ fun EntryScreen(
                 value = amount,
                 onValueChange = { viewModel.setAmount(it) },
                 label = { Text("Betrag") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 isError = amountError != null,
                 supportingText = amountError?.let { error -> { Text(error) } },
                 modifier = Modifier.fillMaxWidth(),
