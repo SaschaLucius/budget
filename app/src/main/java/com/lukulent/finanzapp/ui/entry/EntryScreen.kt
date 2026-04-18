@@ -160,18 +160,23 @@ fun EntryScreen(
                 singleLine = true
             )
 
-            OutlinedTextField(
-                value = date.format(dateFormatter),
-                onValueChange = {},
-                label = { Text("Datum") },
-                readOnly = true,
-                modifier = Modifier.fillMaxWidth(),
-                trailingIcon = {
-                    IconButton(onClick = { showDatePicker = true }) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = date.format(dateFormatter),
+                    onValueChange = {},
+                    label = { Text("Datum") },
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
                         Icon(Icons.Default.DateRange, contentDescription = "Datum wählen")
                     }
-                }
-            )
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable { showDatePicker = true }
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
