@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -93,6 +94,7 @@ fun StatisticsScreen(
     val selectedMonths by viewModel.selectedMonths.collectAsState()
     val selectedMonthsBalance by viewModel.selectedMonthsBalance.collectAsState()
     val paymentFilter by viewModel.paymentFilter.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
 
     val showPaymentMethod by app.settingsDataStore.showPaymentMethod.collectAsState(initial = false)
     val closeOnEntry by app.settingsDataStore.closeOnEntry.collectAsState(initial = false)
@@ -115,9 +117,19 @@ fun StatisticsScreen(
     val filters = listOf(Filter.ThisMonth, Filter.LastMonth, Filter.LastThreeMonths, Filter.LastSixMonths, Filter.LastTwelveMonths, Filter.All)
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd.MM.yyyy") }
 
-    val displayTransactions = remember(transactions, paymentFilter) {
-        if (paymentFilter == null) transactions
-        else transactions.filter { it.paymentMethod == paymentFilter }
+    val displayTransactions = remember(transactions, paymentFilter, searchQuery) {
+        transactions
+            .let { list -> if (paymentFilter == null) list else list.filter { it.paymentMethod == paymentFilter } }
+            .let { list ->
+                if (searchQuery.isBlank()) list
+                else {
+                    val q = searchQuery.trim().lowercase()
+                    list.filter {
+                        it.subject?.lowercase()?.contains(q) == true ||
+                        it.amount.toString().contains(q)
+                    }
+                }
+            }
     }
 
     val grouped = remember(displayTransactions) {
@@ -225,6 +237,23 @@ fun StatisticsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            androidx.compose.material3.OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { viewModel.setSearchQuery(it) },
+                placeholder = { Text("Suchen…") },
+                singleLine = true,
+                shape = RoundedCornerShape(25),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                            Icon(androidx.compose.material.icons.Icons.Default.Close, contentDescription = "Löschen")
+                        }
+                    }
+                }
+            )
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,

@@ -36,6 +36,9 @@ class StatisticsViewModel(
     private val _paymentFilter = MutableStateFlow<PaymentMethod?>(null)
     val paymentFilter: StateFlow<PaymentMethod?> = _paymentFilter
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
     private var queryJob: Job? = null
 
     init {
@@ -51,6 +54,10 @@ class StatisticsViewModel(
     fun setPaymentFilter(method: PaymentMethod?) {
         _paymentFilter.value = method
         recalcSelectedBalance(_transactions.value, _selectedMonths.value)
+    }
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
     }
 
     private fun applyFilter(filter: Filter) {
