@@ -1,0 +1,1 @@
+A simple and privacy-respecting budget tracking app. Track your income and expenses, categorize by payment method, view statistics, and search through your entries. No ads, no tracking, no cloud – all data stays on your device.

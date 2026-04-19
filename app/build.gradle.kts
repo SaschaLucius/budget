@@ -13,7 +13,7 @@ android {
         applicationId = "com.lukulent.finanzapp"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        versionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull() ?: 1
         versionName = (project.findProperty("appVersionName") as String?)?.trimStart('v') ?: "1.0"
     }
 
