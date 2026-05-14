@@ -6,6 +6,7 @@
     <application
         android:name=".FinanzApp"
         android:allowBackup="true"
+        android:hasFragileUserData="true"
         android:label="Budget"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
